@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResearchAI — AI Research Assistant</title>
+  <meta name="description" content="Upload research documents and ask AI-powered questions with source citations. Built with RAG, hybrid search, and Gemini LLM." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ── Top Navigation ───────────────────────────────────────────── -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="url(#grad1)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="url(#grad1)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M2 12l10 5 10-5" stroke="url(#grad1)" stroke-width="1.5" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="grad1" x1="2" y1="2" x2="22" y2="22">
+              <stop offset="0%" stop-color="#818cf8"/>
+              <stop offset="100%" stop-color="#c084fc"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="nav-title">ResearchAI</span>
+      <span class="nav-badge">RAG v1.0</span>
+    </div>
+    <div class="nav-actions">
+      <a href="eval.html" class="nav-link-eval" id="evalNavLink" title="Evaluation Dashboard">📊 Evaluation</a>
+      <div class="status-indicator" id="statusIndicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">Connecting...</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Main Layout ───────────────────────────────────────────────── -->
+  <div class="layout" id="layout">
+
+    <!-- ── Left Sidebar — Document Library ─────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2 class="sidebar-title">Documents</h2>
+        <span class="doc-count" id="docCount">0 docs</span>
+      </div>
+
+      <!-- Upload Zone -->
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="upload-text">Drop files here</p>
+        <p class="upload-subtext">PDF, DOCX, TXT · Max 50MB</p>
+        <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
+          Browse Files
+        </button>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt" multiple hidden />
+      </div>
+
+      <!-- Upload Progress -->
+      <div class="upload-progress-container" id="uploadProgress" style="display:none">
+        <div class="upload-progress-bar">
+          <div class="upload-progress-fill" id="uploadProgressFill"></div>
+        </div>
+        <p class="upload-progress-text" id="uploadProgressText">Processing...</p>
+      </div>
+
+      <!-- Document List -->
+      <div class="doc-list" id="docList">
+        <div class="empty-docs" id="emptyDocs">
+          <p>No documents yet.</p>
+          <p>Upload a PDF to get started.</p>
+        </div>
+      </div>
+
+      <!-- Filter by document -->
+      <div class="sidebar-footer">
+        <label class="filter-label">
+          <input type="checkbox" id="filterByDocs" />
+          Search selected docs only
+        </label>
+      </div>
+    </aside>
+
+    <!-- ── Main Chat Area ────────────────────────────────────────────── -->
+    <main class="chat-area" id="chatArea">
+
+      <!-- Welcome Screen (shown when no messages) -->
+      <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-glow"></div>
+        <div class="welcome-icon">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="url(#wg)" stroke-width="1.2"/>
+            <path d="M12 8v4l3 3" stroke="url(#wg)" stroke-width="1.5" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="wg" x1="2" y1="2" x2="22" y2="22">
+                <stop offset="0%" stop-color="#818cf8"/>
+                <stop offset="100%" stop-color="#c084fc"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="welcome-title">AI Research Assistant</h1>
+        <p class="welcome-subtitle">Upload your research documents and ask questions.<br/>Get grounded answers with source citations.</p>
+        <div class="welcome-chips">
+          <button class="chip" onclick="app.insertSampleQuestion(this)">What are the key findings?</button>
+          <button class="chip" onclick="app.insertSampleQuestion(this)">Summarize the methodology</button>
+          <button class="chip" onclick="app.insertSampleQuestion(this)">What limitations are mentioned?</button>
+          <button class="chip" onclick="app.insertSampleQuestion(this)">Compare the results</button>
+        </div>
+      </div>
+
+      <!-- Messages Container -->
+      <div class="messages" id="messages"></div>
+
+      <!-- Thinking Indicator -->
+      <div class="thinking" id="thinking" style="display:none">
+        <div class="thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span class="thinking-text">Searching documents & generating answer...</span>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="input-bar" id="inputBar">
+        <div class="input-wrapper">
+          <textarea
+            class="chat-input"
+            id="chatInput"
+            placeholder="Ask a question about your documents..."
+            rows="1"
+            maxlength="2000"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" onclick="app.sendMessage()" title="Send (Enter)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-meta">
+          <span class="char-count" id="charCount">0 / 2000</span>
+          <button class="clear-btn" id="clearBtn" onclick="app.clearChat()">Clear chat</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Right Panel — Sources ──────────────────────────────────────── -->
+    <aside class="sources-panel" id="sourcesPanel">
+      <div class="sources-header">
+        <h2 class="sources-title">Sources</h2>
+        <span class="sources-count" id="sourcesCount">0 citations</span>
+      </div>
+      <div class="sources-list" id="sourcesList">
+        <div class="empty-sources" id="emptySources">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" opacity="0.3">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/>
+            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <p>Citations will appear here after asking a question.</p>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ── Toast Notifications ────────────────────────────────────────── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/upload.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

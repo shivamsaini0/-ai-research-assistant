@@ -1,0 +1,31 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+pydantic-settings
+
+# Document parsing
+pymupdf
+python-docx
+
+# Embeddings & Vector Store
+chromadb
+sentence-transformers
+
+# LLM
+google-generativeai
+
+# Hybrid Search (BM25)
+rank-bm25
+
+# Utilities
+python-multipart
+aiofiles
+httpx
+streamlit
+PyJWT
+
+# Evaluation
+ragas
+datasets
+langchain-google-genai

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluation Dashboard — ResearchAI</title>
+  <meta name="description" content="RAGAS-based evaluation dashboard for the AI Research Assistant RAG pipeline. Measures faithfulness, answer relevancy, context precision, and recall." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/eval.css" />
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="url(#g1)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="url(#g1)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M2 12l10 5 10-5" stroke="url(#g1)" stroke-width="1.5" stroke-linejoin="round"/>
+          <defs><linearGradient id="g1" x1="2" y1="2" x2="22" y2="22"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#c084fc"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span class="nav-title">ResearchAI</span>
+      <span class="nav-badge">Evaluation</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html" class="nav-link">← Back to Chat</a>
+    </div>
+  </nav>
+
+  <div class="eval-layout">
+
+    <!-- ── Left: Controls ────────────────────────── -->
+    <aside class="eval-sidebar">
+      <div class="eval-section">
+        <h2 class="eval-section-title">Quick Evaluation</h2>
+        <p class="eval-hint">Runs 5 generic research questions against all uploaded documents.</p>
+        <button class="eval-btn primary" id="quickEvalBtn" onclick="runQuickEval()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 9-14 9V3z" fill="currentColor"/></svg>
+          Run Quick Eval
+        </button>
+      </div>
+
+      <div class="eval-divider"></div>
+
+      <div class="eval-section">
+        <h2 class="eval-section-title">Custom Evaluation</h2>
+        <p class="eval-hint">Add your own Q&amp;A pairs. Ground truth is optional but enables context recall scoring.</p>
+
+        <div id="samplesContainer">
+          <!-- Sample rows injected here -->
+        </div>
+
+        <button class="eval-btn secondary" onclick="addSample()">+ Add Question</button>
+
+        <button class="eval-btn primary" id="customEvalBtn" onclick="runCustomEval()" style="margin-top:12px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Run Custom Eval
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Right: Results ─────────────────────────── -->
+    <main class="eval-main">
+
+      <!-- Metric cards -->
+      <div class="metrics-grid" id="metricsGrid">
+        <div class="metric-card" id="card-faithfulness">
+          <div class="metric-icon">🎯</div>
+          <div class="metric-label">Faithfulness</div>
+          <div class="metric-value" id="val-faithfulness">—</div>
+          <div class="metric-bar"><div class="metric-fill" id="fill-faithfulness"></div></div>
+          <div class="metric-desc">Answer grounded in context (no hallucination)</div>
+        </div>
+        <div class="metric-card" id="card-answer_relevancy">
+          <div class="metric-icon">💬</div>
+          <div class="metric-label">Answer Relevancy</div>
+          <div class="metric-value" id="val-answer_relevancy">—</div>
+          <div class="metric-bar"><div class="metric-fill" id="fill-answer_relevancy"></div></div>
+          <div class="metric-desc">Answer addresses the question asked</div>
+        </div>
+        <div class="metric-card" id="card-context_precision">
+          <div class="metric-icon">🔍</div>
+          <div class="metric-label">Context Precision</div>
+          <div class="metric-value" id="val-context_precision">—</div>
+          <div class="metric-bar"><div class="metric-fill" id="fill-context_precision"></div></div>
+          <div class="metric-desc">Retrieved chunks are relevant to the question</div>
+        </div>
+        <div class="metric-card" id="card-context_recall">
+          <div class="metric-icon">📚</div>
+          <div class="metric-label">Context Recall</div>
+          <div class="metric-value" id="val-context_recall">—</div>
+          <div class="metric-bar"><div class="metric-fill" id="fill-context_recall"></div></div>
+          <div class="metric-desc">All needed info was retrieved (needs ground truth)</div>
+        </div>
+      </div>
+
+      <!-- Status / loading -->
+      <div class="eval-status" id="evalStatus" style="display:none">
+        <div class="eval-spinner"></div>
+        <span id="evalStatusText">Running evaluation...</span>
+      </div>
+
+      <!-- Summary bar -->
+      <div class="eval-summary" id="evalSummary" style="display:none">
+        <div class="summary-left">
+          <span class="summary-label">Overall Score</span>
+          <span class="summary-score" id="overallScore">—</span>
+        </div>
+        <div class="summary-meta" id="summaryMeta"></div>
+      </div>
+
+      <!-- Per-question breakdown table -->
+      <div class="breakdown-section" id="breakdownSection" style="display:none">
+        <h3 class="breakdown-title">Per-Question Breakdown</h3>
+        <div class="breakdown-table-wrapper">
+          <table class="breakdown-table" id="breakdownTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Question</th>
+                <th>Faithfulness</th>
+                <th>Relevancy</th>
+                <th>Precision</th>
+                <th>Recall</th>
+              </tr>
+            </thead>
+            <tbody id="breakdownBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="eval-empty" id="evalEmpty">
+        <div class="eval-empty-icon">📊</div>
+        <h3>No evaluation results yet</h3>
+        <p>Upload some documents in the <a href="index.html">chat interface</a>, then run a quick or custom evaluation.</p>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/eval.js"></script>
+</body>
+</html>
